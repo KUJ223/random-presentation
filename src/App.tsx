@@ -92,7 +92,7 @@ export default function App() {
   // Duplicate Check
   const duplicateTopics = useMemo(() => {
     const counts: Record<string, number> = {};
-    Object.values(topics).forEach(t => {
+    (Object.values(topics) as string[]).forEach(t => {
       const trimmed = t.trim();
       if (trimmed) {
         counts[trimmed] = (counts[trimmed] || 0) + 1;
@@ -122,13 +122,26 @@ export default function App() {
           // Expected columns: 学年-班 (Grade-Class), 姓名 (Name) or similar
           // Mapping logic: try to find keys that contain "학년-반" and "이름"
           const students: Student[] = data.map((row, idx) => {
-            const classKey = Object.keys(row).find(k => k.includes('반') || k.includes('학급') || k.includes('Grade'));
+            const gradeKey = Object.keys(row).find(k => k === '학년' || k.includes('Grade') || k.includes('학년도'));
+            const classOnlyKey = Object.keys(row).find(k => k === '반' || k === '학급' || k.includes('Class'));
+            const combinedKey = Object.keys(row).find(k => k.includes('학년-반') || k.includes('학년반') || k.includes('Grade-Class'));
+            
+            let gradeClass = '기타';
+            if (combinedKey && row[combinedKey]) {
+              gradeClass = row[combinedKey].toString().trim();
+            } else if (gradeKey && classOnlyKey && row[gradeKey] && row[classOnlyKey]) {
+              gradeClass = `${row[gradeKey].toString().trim()}-${row[classOnlyKey].toString().trim()}`;
+            } else {
+              const fallbackKey = Object.keys(row).find(k => k.includes('반') || k.includes('학급') || k.includes('Grade') || k.includes('Class'));
+              gradeClass = (row[fallbackKey || '학년-반'] || '기타').toString().trim();
+            }
+            
             const nameKey = Object.keys(row).find(k => k.includes('이름') || k.includes('성명') || k.includes('Name'));
             
             return {
               id: `student-${idx}`,
-              name: row[nameKey || '이름'] || row['성명'] || row['Name'] || '무명',
-              gradeClass: row[classKey || '학년-반'] || row['학급'] || row['Class'] || '기타'
+              name: (row[nameKey || '이름'] || row['성명'] || row['Name'] || '무명').toString().trim(),
+              gradeClass: gradeClass
             };
           });
           
@@ -158,16 +171,16 @@ export default function App() {
   const handleRandomize = () => {
     // Only randomize students who have topics entered? Or all?
     // Requirement says "주제 입력 학생들을 무작위 순서로 정렬"
-    const studentsWithTopics = filteredStudents.filter(s => topics[s.id]?.trim());
-    const studentsWithoutTopics = filteredStudents.filter(s => !topics[s.id]?.trim());
+    const studentsWithTopics = filteredStudents.filter((s: Student) => topics[s.id]?.trim());
+    const studentsWithoutTopics = filteredStudents.filter((s: Student) => !topics[s.id]?.trim());
     
     if (studentsWithTopics.length === 0) {
       alert("발표 주제가 입력된 학생이 없습니다.");
       return;
     }
 
-    const shuffled = shuffleArray(studentsWithTopics);
-    setDisplayOrder([...shuffled.map(s => s.id), ...studentsWithoutTopics.map(s => s.id)]);
+    const shuffled = shuffleArray<Student>(studentsWithTopics);
+    setDisplayOrder([...shuffled.map((s: Student) => s.id), ...studentsWithoutTopics.map((s: Student) => s.id)]);
     setIsRandomized(true);
   };
 
@@ -179,7 +192,7 @@ export default function App() {
   const downloadDocx = async () => {
     const orderedStudents = displayOrder
       .map(id => filteredStudents.find(s => s.id === id))
-      .filter((s): s is Student => !!s && !!topics[s.id]?.trim());
+      .filter((s): s is Student => !!s && (topics[s.id]?.trim() ? true : false));
 
     if (orderedStudents.length === 0) {
       alert("다운로드할 발표 결과가 없습니다.");
@@ -466,7 +479,7 @@ export default function App() {
           {/* Footer Status Panel */}
           <div className="border-t border-neutral-800 p-4 bg-[#0d0d0d] flex items-center justify-between shrink-0">
             <span className="text-[10px] text-neutral-500 font-mono tracking-tight">
-              Total: {filteredStudents.length} Students | Ready: {Object.values(topics).filter(t => t.trim()).length}
+              Total: {filteredStudents.length} Students | Ready: {(Object.values(topics) as string[]).filter(t => t.trim()).length}
             </span>
             <div className="flex items-center gap-2">
               <div className={`w-1.5 h-1.5 rounded-full ${allStudents.length > 0 ? 'bg-green-500' : 'bg-neutral-800 animate-pulse'}`}></div>
