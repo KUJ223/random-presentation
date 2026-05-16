@@ -1,0 +1,8 @@
+{
+  "name": "Random PPT Manager",
+  "description": "G-Sheet integrated presentation manager with real-time duplicate check, random sorting, and DOCX export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
